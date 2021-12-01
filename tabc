@@ -15,6 +15,10 @@ commands:
                             <wid> (enabled by default).
     autod <classes>         launch a daemon that creates a tabbed container
                             for every new window which class is in <classes>.
+
+    groupd <classes>        launch a daemon that creates a tab in a container
+                            for every new window which class is in <classes>.
+
     refreshd                launch a daemon that does its job as a workaround
                             for a bug that makes the tab bar width not to be
                             correctly adjusted sometimes when the size of the
@@ -222,6 +226,7 @@ attach() {
         focusedid=$(bspc query -N -n)
     fi
 
+    
     if [[ "$(get_class "$otherid")" != "tabbed" ]]; then
         bspc node -f "$otherid"
         create "$otherid"
@@ -306,6 +311,36 @@ autod() {
     done < <(bspc subscribe node_add)
 }
 
+groupd() {
+    classes="$*"
+    group_tabbed_id=0
+
+    if [[ -z $classes ]]; then
+	printf "error: no class specified\n" >&2
+	exit 1
+    fi
+
+    while IFS= read -r id; do
+	sleep 0.1
+	id="$(split "$id" " " 4)"
+
+	bspc query -N -n "$id".tiled &> /dev/null || continue
+
+	class="$(get_class "$id" 2> /dev/null)" || continue
+	focusedid=$(bspc query -N -n) || continue
+
+	if [[ "$classes" =~ $class ]]; then
+
+	    if ! node_is_window "$group_tabbed_id"; then
+		create "$focusedid"
+		group_tabbed_id=$tabbedid0
+	    else
+		attach "$focusedid" "$group_tabbed_id"
+	    fi
+	fi
+    done < <(bspc subscribe node_add)
+}
+
 refreshd() {
     while IFS= read -r id; do
         bspc query -N -n .local.fullscreen &> /dev/null && continue
@@ -345,7 +380,11 @@ get_command() {
         autod)
             shift
             autod "$@"
-        ;;
+	;;
+	groupd)
+	    shift
+	    groupd "$@"
+	;;
         refreshd)
             refreshd
         ;;
