@@ -335,7 +335,7 @@ groupd() {
 		create "$focusedid"
 		group_tabbed_id=$tabbedid0
 	    else
-		attach "$focusedid" "$group_tabbed_id"
+		tabc attach "$focusedid" "$group_tabbed_id" || continue
 	    fi
 	fi
     done < <(bspc subscribe node_add)
